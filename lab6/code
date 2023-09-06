@@ -1,0 +1,516 @@
+#include <iostream>
+#include <chrono>
+#include <vector>
+#include <random>
+#include <numeric>
+#include <fstream>
+
+#pragma comment(linker, "/STACK:66777216")
+
+using namespace std;
+
+struct Node {
+    int key;
+    Node* left;
+    Node* right;
+    int height;
+};
+
+class BinarySearchTree {
+private:
+    Node* root;
+
+    /**
+    *Recursively inserts a new node with the given key into the binary search tree rooted at current_node.
+    *If current_node is NULL, creates a new node with the given key and returns a pointer to the new node.
+    *@param current_node A pointer to the root node of the subtree to insert the new node into.
+    *@param key The key value of the new node to be inserted.
+    *@return A pointer to the root node of the modified subtree.
+    */
+    Node* insert_helper_bst(Node* current_node, int key) {
+        if (current_node == NULL) {
+            Node* new_node = new Node;
+            new_node->key = key;
+            new_node->left = NULL;
+            new_node->right = NULL;
+            return new_node;
+        }
+        else if (key < current_node->key) {
+            current_node->left = insert_helper_bst(current_node->left, key);
+        }
+        else if (key > current_node->key) {
+            current_node->right = insert_helper_bst(current_node->right, key);
+        }
+        return current_node;
+    }
+
+   /**
+   * Recursively searches for a given key in a binary search tree starting from a given node.
+   * 
+   * @param current_node A pointer to the current node being examined in the search.
+   * @param key The key being searched for in the binary search tree.
+   * 
+   * @return Returns true if the key is found in the binary search tree, false otherwise.
+   */
+    bool search_helper_bst(Node* current_node, int key) {
+        if (current_node == NULL) {
+            return false;
+        }
+        else if (key == current_node->key) {
+            return true;
+        }
+        else if (key < current_node->key) {
+            return search_helper_bst(current_node->left, key);
+        }
+        else {
+            return search_helper_bst(current_node->right, key);
+        }
+    }
+
+    /**
+    * Finds the node with the given key in a binary search tree.
+    * 
+    * @param key The key being searched for in the binary search tree.
+    * 
+    * @return Returns a pointer to the node with the given key if found, nullptr otherwise.
+    */
+    Node* find_helper_bst(int key) {
+        Node* current_node = this->root;
+        while (current_node != nullptr) {
+            if (current_node->key == key) {
+                break;
+            }
+            current_node = current_node->key < key ? current_node->right : current_node->left;
+        }
+        return current_node;
+    }
+
+    /**
+    * Removes the node with the given key from a binary search tree.
+    * 
+    * @param current_node The root node of the binary search tree to remove the key from.
+    * @param key The key of the node to be removed from the binary search tree.
+    * 
+    * @return Returns the root node of the modified binary search tree after removing the node with the given key.
+    */
+    Node* remove_helper_bst(Node* current_node, int key) {
+        if (current_node == NULL) {
+            return NULL;
+        }
+        else if (key < current_node->key) {
+            current_node->left = remove_helper_bst(current_node->left, key);
+        }
+        else if (key > current_node->key) {
+            current_node->right = remove_helper_bst(current_node->right, key);
+        }
+        else {
+            if (current_node->left == NULL && current_node->right == NULL) {
+                delete current_node;
+                current_node = NULL;
+            }
+            else if (current_node->left == NULL) {
+                Node* temp = current_node;
+                current_node = current_node->right;
+                delete temp;
+            }
+            else if (current_node->right == NULL) {
+                Node* temp = current_node;
+                current_node = current_node->left;
+                delete temp;
+            }
+            else {
+                Node* min_right = current_node->right;
+                while (min_right->left != NULL) {
+                    min_right = min_right->left;
+                }
+                current_node->key = min_right->key;
+                current_node->right = remove_helper_bst(current_node->right, min_right->key);
+            }
+        }
+        return current_node;
+    }
+
+public:
+    BinarySearchTree() {
+        this->root = nullptr;
+    }
+
+    void insert_bst(unsigned int key) {
+        this->root = insert_helper_bst(root, key);
+    }
+
+    bool search_bst(unsigned int key) {
+        return search_helper_bst(root, key);
+    }
+
+    void find_bst(unsigned int key) {
+        this->root = find_helper_bst(key);
+    }
+
+    void remove_bst(unsigned int key) {
+        this->root = remove_helper_bst(root, key);
+    }
+};
+
+
+class AVLTree {
+private:
+    Node* root;
+
+    int height(Node* N) {
+        if (N == NULL)
+            return 0;
+        return N->height;
+    }
+
+    int max(int a, int b) {
+        return (a > b) ? a : b;
+    }
+
+    // New node creation
+        Node * newNode(int key) {
+        Node* node = new Node();
+        node->key = key;
+        node->left = NULL;
+        node->right = NULL;
+        node->height = 1;
+        return (node);
+    }
+
+    /**
+    *Perform a right rotation on the given node and its children.
+    *@param y The node to rotate.
+    *@return The new root of the subtree after the rotation.
+    */
+    Node* rightRotate(Node* y) {
+        Node* x = y->left;
+        Node* T2 = x->right;
+        x->right = y;
+        y->left = T2;
+        y->height = max(height(y->left),
+            height(y->right)) +
+            1;
+        x->height = max(height(x->left),
+            height(x->right)) +
+            1;
+        return x;
+    }
+
+    /**
+    * Performs a left rotation on the given node and returns the new root.
+    *
+    * @param x The node to rotate left around.
+    * @return The new root node after the left rotation.
+    */
+    Node* leftRotate(Node* x) {
+        Node* y = x->right;
+        Node* T2 = y->left;
+        y->left = x;
+        x->right = T2;
+        x->height = max(height(x->left),
+            height(x->right)) +
+            1;
+        y->height = max(height(y->left),
+            height(y->right)) +
+            1;
+        return y;
+    }
+
+    // Get the balance factor of each node
+    int getBalanceFactor(Node* N) {
+        if (N == NULL)
+            return 0;
+        return height(N->left) -
+            height(N->right);
+    }
+
+    // Insert a node
+    Node* insertNode(Node* node, int key) {
+        // Find the correct postion and insert the node
+        if (node == NULL)
+            return (newNode(key));
+        if (key < node->key)
+            node->left = insertNode(node->left, key);
+        else if (key > node->key)
+            node->right = insertNode(node->right, key);
+        else
+            return node;
+
+        // Update the balance factor of each node and
+        // balance the tree
+        node->height = 1 + max(height(node->left),
+            height(node->right));
+        int balanceFactor = getBalanceFactor(node);
+        if (balanceFactor > 1) {
+            if (key < node->left->key) {
+                return rightRotate(node);
+            }
+            else if (key > node->left->key) {
+                node->left = leftRotate(node->left);
+                return rightRotate(node);
+            }
+        }
+        if (balanceFactor < -1) {
+            if (key > node->right->key) {
+                return leftRotate(node);
+            }
+            else if (key < node->right->key) {
+                node->right = rightRotate(node->right);
+                return leftRotate(node);
+            }
+        }
+        return node;
+    }
+
+    // Node with minimum value
+    Node* nodeWithMimumValue(Node* node) {
+        Node* current = node;
+        while (current->left != NULL)
+            current = current->left;
+        return current;
+    }
+
+    Node* find_helper_avl(int key) {
+        Node* current_node = this->root;
+        while (current_node != nullptr) {
+            if (current_node->key == key) {
+                break;
+            }
+            current_node = current_node->key < key ? current_node->right : current_node->left;
+        }
+        return current_node;
+    }
+
+    // Delete a node
+    Node* deleteNode(Node* root, int key) {
+        // Find the node and delete it
+        if (root == NULL)
+            return root;
+        if (key < root->key)
+            root->left = deleteNode(root->left, key);
+        else if (key > root->key)
+            root->right = deleteNode(root->right, key);
+        else {
+            if ((root->left == NULL) ||
+                (root->right == NULL)) {
+                Node* temp = root->left ? root->left : root->right;
+                if (temp == NULL) {
+                    temp = root;
+                    root = NULL;
+                }
+                else
+                    *root = *temp;
+                free(temp);
+            }
+            else {
+                Node* temp = nodeWithMimumValue(root->right);
+                root->key = temp->key;
+                root->right = deleteNode(root->right,
+                    temp->key);
+            }
+        }
+
+        if (root == NULL)
+            return root;
+
+        // Update the balance factor of each node and
+        // balance the tree
+        root->height = 1 + max(height(root->left),
+            height(root->right));
+        int balanceFactor = getBalanceFactor(root);
+        if (balanceFactor > 1) {
+            if (getBalanceFactor(root->left) >= 0) {
+                return rightRotate(root);
+            }
+            else {
+                root->left = leftRotate(root->left);
+                return rightRotate(root);
+            }
+        }
+        if (balanceFactor < -1) {
+            if (getBalanceFactor(root->right) <= 0) {
+                return leftRotate(root);
+            }
+            else {
+                root->right = rightRotate(root->right);
+                return leftRotate(root);
+            }
+        }
+        return root;
+    }
+
+    public:
+        AVLTree() {
+            this->root = NULL;
+        }
+
+        void insert_avl(unsigned int key) {
+            this->root = insertNode(root, key);
+        }
+
+        void search_avl(unsigned int key) {
+            this->root = find_helper_avl(key);
+        }
+
+        void remove_avl(unsigned int key) {
+            this->root = deleteNode(root, key);
+        }
+};
+
+
+int main() {
+
+    ofstream fout("output.txt");
+
+   /* BinarySearchTree bst;
+
+    bst.insert_bst(5);
+    bst.insert_bst(2);
+    bst.insert_bst(8);
+    bst.insert_bst(1);
+    bst.insert_bst(4);
+    bst.insert_bst(7);
+    bst.insert_bst(10);
+
+    chrono::high_resolution_clock::time_point start = chrono::high_resolution_clock::now();
+    bst.search_bst(4);
+    chrono::high_resolution_clock::time_point end = chrono::high_resolution_clock::now();
+    chrono::duration<double, nano> nano_diff = end - start;
+    cout << "Time: " << nano_diff.count() << " nano sec." << endl;
+
+
+    chrono::high_resolution_clock::time_point start1 = chrono::high_resolution_clock::now();
+    bst.find_bst(4);
+    chrono::high_resolution_clock::time_point end1 = chrono::high_resolution_clock::now();
+    chrono::duration<double, nano> nano_diff1 = end1 - start1;
+    cout << "Time: " << nano_diff1.count() << " nano sec." << endl;*/
+
+    for (int i = 0; i < 10; i++) {
+        cout << "Test seria: " << i + 1 << endl << endl;
+        fout << "Test seria: " << i + 1 << endl << endl;
+        for (int j = 0; j < 20; j++) {
+            cout << "test number: " << j + 1 << endl;
+            fout << "test number: " << j + 1 << endl;
+            BinarySearchTree bst;
+            AVLTree avl;
+            auto vec = std::vector<unsigned int>(pow(2, 10 + i));
+            if (j > 9) {
+                mt19937 engine(time(nullptr));
+                uniform_real_distribution<double> gen(0, pow(2, 10 + i));
+                for (auto& el : vec)
+                    el = gen(engine);
+            }
+            else {
+                std::iota(vec.begin(), vec.end(), 1);
+            }
+
+            //inserting into bst
+            chrono::high_resolution_clock::time_point start1 = chrono::high_resolution_clock::now();
+            for (auto& el : vec) {
+                bst.insert_bst(el);
+            }
+            chrono::high_resolution_clock::time_point end1 = chrono::high_resolution_clock::now();
+            chrono::duration<double> sec_diff1 = end1 - start1;
+            cout << "Time inserting into BST tree: " << sec_diff1.count() << " sec." << endl;
+            fout << "Time inserting into BST tree: " << sec_diff1.count() << " sec." << endl;
+            
+
+            //inserting into avl
+            chrono::high_resolution_clock::time_point start2 = chrono::high_resolution_clock::now();
+            for (auto& el : vec) {
+                avl.insert_avl(el);
+            }
+            chrono::high_resolution_clock::time_point end2 = chrono::high_resolution_clock::now();
+            chrono::duration<double> sec_diff2 = end2 - start2;
+            cout << "Time inserting into AVL tree: " << sec_diff2.count() << " sec." << endl;
+            fout << "Time inserting into AVL tree: " << sec_diff2.count() << " sec." << endl;
+            
+
+            
+            //searching in bst
+            chrono::high_resolution_clock::time_point start3 = chrono::high_resolution_clock::now();
+            for (int k = 0; k < 1000; k++) {
+                mt19937 engine(time(nullptr));
+                uniform_real_distribution<double> gen(0, pow(2, 10 + i));
+                bst.search_bst(gen(engine));
+            }
+            chrono::high_resolution_clock::time_point end3 = chrono::high_resolution_clock::now();
+            chrono::duration<double> sec_diff3 = end3 - start3;
+            cout << "Time searching 1000 times in BST tree: " << sec_diff3.count() << " sec." << endl;
+            fout << "Time searching 1000 times in BST tree: " << sec_diff3.count() << " sec." << endl;
+            auto bst_searching_time = sec_diff3.count() / 1000;
+            fout << "Time searching 1 time in BST tree: " << bst_searching_time << " sec." << endl;
+            cout << "Time searching 1 time in BST tree: " << bst_searching_time << " sec." << endl;
+
+
+            //searching in avl
+            chrono::high_resolution_clock::time_point start4 = chrono::high_resolution_clock::now();
+            for (int k = 0; k < 1000; k++) {
+                mt19937 engine(time(nullptr));
+                uniform_real_distribution<double> gen(0, pow(2, 10 + i));
+                avl.search_avl(gen(engine));
+            }
+            chrono::high_resolution_clock::time_point end4 = chrono::high_resolution_clock::now();
+            chrono::duration<double> sec_diff4 = end4 - start4;
+            cout << "Time searching 1000 times in AVL tree: " << sec_diff4.count() << " sec." << endl;
+            fout << "Time searching 1000 times in AVL tree: " << sec_diff4.count() << " sec." << endl;
+            auto avl_searching_time = sec_diff4.count() / 1000;
+            fout << "Time searching 1 time in AVL tree: " << avl_searching_time << " sec." << endl;
+            cout << "Time searching 1 time in AVL tree: " << avl_searching_time << " sec." << endl;
+
+
+            //searching in vector
+            chrono::high_resolution_clock::time_point start5 = chrono::high_resolution_clock::now();
+            for (int k = 0; k < 1000; k++) {
+                mt19937 engine(time(nullptr));
+                uniform_real_distribution<double> gen(0, pow(2, 10 + i));
+                std::find(vec.begin(), vec.end(), gen(engine));
+            }
+            chrono::high_resolution_clock::time_point end5 = chrono::high_resolution_clock::now();
+            chrono::duration<double> sec_diff5 = end5 - start5;
+            cout << "Time searching 1000 times in Vector: " << sec_diff5.count() << " sec." << endl;
+            fout << "Time searching 1000 times in Vector: " << sec_diff5.count() << " sec." << endl;
+            auto vector_searching_time = sec_diff5.count() / 1000;
+            fout << "Time searching 1 time in vector: " << vector_searching_time << " sec." << endl;
+            cout << "Time searching 1 time in vector: " << vector_searching_time << " sec." << endl;
+
+
+            //deleting in BST
+            chrono::high_resolution_clock::time_point start6 = chrono::high_resolution_clock::now();
+            for (int k = 0; k < 1000; k++) {
+                mt19937 engine(time(nullptr));
+                uniform_real_distribution<double> gen(0, pow(2, 10 + i));
+                bst.remove_bst(gen(engine));
+            }
+            chrono::high_resolution_clock::time_point end6 = chrono::high_resolution_clock::now();
+            chrono::duration<double> sec_diff6 = end6 - start6;
+            cout << "Time deleting 1000 times from BST tree: " << sec_diff6.count() << " sec." << endl;
+            fout << "Time deleting 1000 times from BST tree: " << sec_diff6.count() << " sec." << endl;
+            auto bst_deleting_time = sec_diff6.count() / 1000;
+            fout << "Time deleting 1 time from BST tree: " << bst_deleting_time << " sec." << endl;
+            cout << "Time deleting 1 time from BST tree: " << bst_deleting_time << " sec." << endl;
+
+
+            //deleting in AVL
+            chrono::high_resolution_clock::time_point start7 = chrono::high_resolution_clock::now();
+            for (int k = 0; k < 1000; k++) {
+                mt19937 engine(time(nullptr));
+                uniform_real_distribution<double> gen(0, pow(2, 10 + i));
+                avl.remove_avl(gen(engine));
+            }
+            chrono::high_resolution_clock::time_point end7 = chrono::high_resolution_clock::now();
+            chrono::duration<double> sec_diff7 = end7 - start7;
+            cout << "Time deleting 1000 times from AVL tree: " << sec_diff7.count() << " sec." << endl;
+            fout << "Time deleting 1000 times from AVL tree: " << sec_diff7.count() << " sec." << endl;
+            auto avl_deleting_time = sec_diff7.count() / 1000;
+            cout << "Time deleting 1 time from AVL tree: " << avl_deleting_time << " sec." << endl;
+            fout << "Time deleting 1 time from AVL tree: " << avl_deleting_time << " sec." << endl;
+        }
+        cout << endl;
+        fout << endl;
+        
+    }
+  
+    fout.close();
+    return EXIT_SUCCESS;
+}
