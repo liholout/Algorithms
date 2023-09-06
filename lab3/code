@@ -1,0 +1,408 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <random>
+#include <string>
+
+template <typename T>
+class Queue {
+private:
+    struct Node {
+        T data;
+        Node* next;
+        Node(const T& d) : data(d), next(nullptr) {}
+    };
+
+    Node* head_;
+    Node* tail_;
+    size_t size_;
+
+public:
+    Queue() : head_(nullptr), tail_(nullptr), size_(0) {}
+
+     /**
+     * Adds an element to the back of the queue.
+     * 
+     * @param element The element to be added to the queue.
+     */
+    void push(const T& element) {
+        Node* new_node = new Node(element);
+        if (tail_ == nullptr) {
+            head_ = new_node;
+            tail_ = new_node;
+        }
+        else {
+            tail_->next = new_node;
+            tail_ = new_node;
+        }
+        size_++;
+    }
+
+    /**
+     * Removes the first element from the queue.
+     * 
+     * @throw std::out_of_range If the queue is empty.
+     */
+    void pop() {
+        if (head_ == nullptr) {
+            throw std::out_of_range("Queue is empty");
+        }
+        Node* old_head = head_;
+        head_ = old_head->next;
+        delete old_head;
+        size_--;
+        if (head_ == nullptr) {
+            tail_ = nullptr;
+        }
+    }
+
+    /**
+    * Get the first element from the queue.
+    * 
+    * @return A reference to the first element in the queue.
+    * 
+    * @throws std::out_of_range If the queue is empty.
+    */
+    T& front() const {
+        if (head_ == nullptr) {
+            throw std::out_of_range("Queue is empty");
+        }
+        return head_->data;
+    }
+
+    /**
+    *Checks if the queue is empty.
+    *
+    *Returns:
+    *    True if the queue is empty, false otherwise.
+    */
+    bool isEmpty() const {
+        return head_ == nullptr;
+    }
+
+    /**
+    * @brief Get the number of elements in the queue.
+    * 
+    * @return The number of elements in the queue.
+    */
+    size_t size() const {
+        return size_;
+    }
+
+    /**
+    * @brief Sort the elements of the queue in ascending order using std::sort.
+    * 
+    * The function uses std::vector as a temporary container to hold the elements of the queue,
+    * and then sorts them in ascending order using std::sort. Finally, it pushes the sorted elements
+    * back into the queue.
+    */
+    void sortqueue() {
+        std::vector<T> temp;
+        while (!isEmpty()) {
+            temp.push_back(front());
+            pop();
+        }
+        std::sort(temp.begin(), temp.end());
+        for (const T& t : temp) {
+            push(t);
+        }
+    }
+
+    /**
+    * Reverse the elements of the queue in place.
+    * 
+    * The function uses std::stack to temporarily hold the elements of the queue,
+    * and then pops them from the stack and pushes them back onto the queue in reverse order.
+    */
+    void reverse() {
+        std::stack<T> s;
+        // push elements from the queue onto the stack
+        while (!isEmpty()) {
+            s.push(front());
+            pop();
+        }
+
+        // pop elements from the stack and push them back onto the queue
+        while (!s.empty()) {
+            push(s.top());
+            s.pop();
+        }
+    }
+
+    // Iterator
+    class Iterator {
+    private:
+        Node* current_;
+
+    public:
+        // Constructor
+        Iterator(Node* current = nullptr) : current_(current) {}
+        
+        // Dereference operator
+        // Returns a reference to the current element
+        T& operator*() {
+            if (current_ == nullptr) {
+                throw std::out_of_range("Iterator is out of range");
+            }
+            return current_->data;
+        }
+        
+        // Prefix increment operator
+        // Advances the iterator to the next element
+        Iterator& operator++() {
+            if (current_ != nullptr) {
+                current_ = current_->next;
+            }
+            return *this;
+        }
+
+        // Inequality operator
+        // Returns true if the two iterators are not equal
+        bool operator!=(const Iterator& other) const {
+            return current_ != other.current_;
+        }
+    };
+
+    // Returns an iterator to the beginning of the queue
+    Iterator begin() {
+        return Iterator(head_);
+    }
+
+    // Returns an iterator to the end of the queue
+    Iterator end() {
+        return Iterator(nullptr);
+    }
+};
+
+/**
+*
+*This function tests the Queue class by creating a queue of N integers, filling it with N random integers, and then computing and outputting the sum, average, minimum, and maximum of the integers in the queue.
+*
+*@param N the number of integers to be pushed into the queue
+*
+*@return void
+*/
+void testQueue(int N) {
+    // Initialize the random number generator
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> distr(-1000, 1000);
+
+    // Create a new queue
+    Queue<int> myqueue;
+
+    // Fill the list with 1000 random integers
+    for (int i = 0; i < N; ++i) {
+       myqueue.push(distr(gen));
+    }
+
+    // Compute the sum, average, minimum, and maximum of the list
+    int sum = 0;
+    int min = std::numeric_limits<int>::max();
+    int max = std::numeric_limits<int>::min();
+
+    for (auto it : myqueue) {
+        sum += it;
+        if (it < min) {
+            min = it;
+        }
+        if (it > max) {
+            max = it;
+        }
+    }
+
+    double avg = static_cast<double>(sum) / static_cast<double>(myqueue.size());
+
+    // Output the results
+    std::cout << "Sum: " << sum << std::endl;
+    std::cout << "Average: " << avg << std::endl;
+    std::cout << "Minimum: " << min << std::endl;
+    std::cout << "Maximum: " << max << std::endl;
+
+
+}
+
+/**
+*
+*This function tests a Queue data structure holding strings. It adds N "old" elements to the queue, then adds a "new" element, and finally removes an element. It prints the queue before adding the "new" element, after adding it, and after removing an element.
+*
+*@param N The number of "old" elements to add to the queue.
+*/
+void testString(int N)
+{
+    Queue<std::string> myqueue;
+
+    for (int i = 0; i < N; i++) {
+        myqueue.push("old");
+    }
+
+    std::cout << "Queue before adding element: ";
+    for (auto it : myqueue) {
+        std::cout << it << " ";
+    }
+    std::cout << std::endl;
+
+    myqueue.push("new");
+    std::cout << "Queue after adding element: ";
+    for (auto it : myqueue) {
+        std::cout << it << " ";
+    }
+
+    std::cout << std::endl;
+
+    myqueue.pop();
+    std::cout << "Queue after element remove: ";
+    for (auto it : myqueue) {
+        std::cout << it << " ";
+    }
+
+    std::cout << std::endl;
+
+}
+
+std::vector<std::string> surnames = { "Kazanova", "Petrova", "Sidorova", "Kalich", "Tokareva", "Zubareva", "Maksimova", "Pupkina", "Petushkova", "Kuricina" };
+std::vector<std::string> names = { "Polina", "Anna", "Elizaveta", "Alice", "Maria", "Katerina", "Julia", "Anastasia", "Agata", "Olga" };
+std::vector<std::string> patronymics = { "Nikolaevna", "Vadimovna", "Dmitrievna", "Maksimovna", "Ivanovna", "Vitalievna", "Semenovna", "Vladimirovna", "Egorovna", "Artemovna" };
+
+// Structure for holding personal data
+struct Person {
+    std::string surname;
+    std::string name;
+    std::string patronymic;
+    std::string dob;
+};
+
+int randomInt(int min, int max) {
+    return rand() % (max - min + 1) + min;
+}
+
+std::string randomDob() {
+    int day = randomInt(1, 31);
+    int month = randomInt(1, 12);
+    int year = randomInt(1980, 2020);
+    return std::to_string(day) + "/" + std::to_string(month) + "/" + std::to_string(year);
+}
+
+std::string randomName(const std::vector<std::string>& names) {
+    return names[randomInt(0, names.size() - 1)];
+}
+
+/**
+*A function that tests the usage of the Person structure and Queue class.
+*Generates 100 people with random surnames, names, patronymics and dates of birth.
+*Sorts the people into different queues based on their age and prints the results.
+*/
+void testStructure()
+{
+    srand(time(0));
+    Queue<Person> people;
+    for (int i = 0; i < 100; i++) {
+        Person person;
+        person.surname = randomName(surnames);
+        person.name = randomName(names);
+        person.patronymic = randomName(patronymics);
+        person.dob = randomDob();
+        people.push(person);
+    }
+
+    Queue<Person> under20;
+    Queue<Person> over30;
+    Queue<Person> sortedpeople;
+    for (const auto& person : people) {
+        int year = std::stoi(person.dob.substr(6, 4));
+        int age = 2023 - year;
+        if (age < 20) {
+            under20.push(person);
+            sortedpeople.push(person);
+        }
+        else if (age > 30) {
+            over30.push(person);
+            sortedpeople.push(person);
+        }
+    }
+
+    int mistakesCount = 0;
+    for (const auto& person : sortedpeople) {
+        int year = std::stoi(person.dob.substr(6, 4));
+        int age = 2023 - year;
+        if ((age > 20) && (age < 30)) {
+            mistakesCount++;
+        }
+    }
+    std::cout << "Number of people under 20: " << under20.size() << std::endl;
+    std::cout << "Number of people over 30: " << over30.size() << std::endl;
+    std::cout << "Number of people under 20 and over 30: " << sortedpeople.size() << std::endl;
+    std::cout << "Number of people between 20 and 30: " << mistakesCount << std::endl;
+
+}
+
+/**
+*
+*Sorts a Queue of N elements.
+*Generates N random integers between -1000 and 1000 and fills the Queue.
+*Copies Queue elements to a vector and sorts the vector in ascending order.
+*Sorts the Queue and compares its elements to the sorted vector.
+*Prints the sorted Queue and sorted vector, along with the number of differences.
+*Reverses the Queue and prints it in reverse order.
+*
+*@param N Number of elements to be generated and sorted.
+*/
+void testSort(int N)
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> distr(-1000, 1000);
+
+    // Create a new Queue
+    Queue<int> myqueue;
+    std::vector<int> vec(N);
+
+    // Fill the list with 1000 random integers
+    for (int i = 0; i < N; ++i) {
+        myqueue.push(distr(gen));
+    }
+
+    int i = 0;
+    for (auto l : myqueue) {
+        vec[i] = l;
+        i++;
+    }
+
+    
+    
+    std::sort(vec.begin(), vec.end());
+
+    myqueue.sortqueue();
+
+    std::cout << "Sorted queue" << std::endl;
+    i = 0;
+    int mistakes = 0;
+    for (auto l : myqueue) {
+        if (l != vec[i]) {
+            mistakes++;
+        }
+        std::cout << l << std::endl;
+        i++;
+    }
+
+    std::cout << "Sorted vector" << std::endl;
+    for (auto l : vec) {
+        std::cout << l << std::endl;
+    }
+
+    std::cout << "Number of mistakes: " << mistakes << std::endl;
+
+    std::cout << "Inverted queue" << std::endl;
+    myqueue.reverse();
+    for (auto l : myqueue) {
+        std::cout << l << std::endl;
+    }
+}
+
+int main() {
+    testQueue(1000);
+    testString(10);
+    testStructure();
+    testSort(10);
+    return EXIT_SUCCESS;
+}
