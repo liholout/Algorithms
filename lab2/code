@@ -1,0 +1,267 @@
+#include <iostream> // организации ввода-вывода
+#include <vector> // реализует динамический массив
+#include <random> // определяет средства для генерации случайных чисел
+#include <chrono> // для определения классов и функций, которые представляют и управляют длительностями времени и моментами времени
+#include <fstream> // реализует вывод в файл
+#include <numeric> // содержит коллекцию численных алгоритмов 
+
+
+/*
+* Сортировка слиянием
+* @param arr - ссылка на вектор
+* @param l - индекс левого элемента
+* @param m - индекс среднего элемента
+* @param r - индекс правого элемента
+* @param count - ссылка на счетчик рекурсий
+* @param mem - ссылка на переменную для подсчёта памяти
+*/
+void merge(std::vector<double>& arr, int l, int m, int r, double& count, double& mem) {
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    // Create temporary vectors
+    std::vector<double> L(n1);
+    std::vector<double> R(n2);
+
+    // Copy data to temporary vectors
+    for (int i = 0; i < n1; i++) {
+        L[i] = arr[l + i];
+        mem += sizeof(L[i]); // Track memory usage
+    }
+    for (int j = 0; j < n2; j++) {
+        R[j] = arr[m + 1 + j];
+        mem += sizeof(R[j]); // Track memory usage
+    }
+
+    // Merge the temporary vectors back into arr[l..r]
+    int i = 0, j = 0, k = l;
+    while (i < n1 && j < n2) {
+        if (L[i] <= R[j]) {
+            arr[k] = L[i];
+            i++;
+        }
+        else {
+            arr[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    // Copy the remaining elements of L[], if there are any
+    while (i < n1) {
+        arr[k] = L[i];
+        i++;
+        k++;
+    }
+
+    // Copy the remaining elements of R[], if there are any
+    while (j < n2) {
+        arr[k] = R[j];
+        j++;
+        k++;
+    }
+}
+
+
+/*
+* Функция разбиения и рекурсии
+* @param arr - ссылка на сортируемый вектор
+* @param l - индекс левого элемента
+* @param r - индекс правого элемента
+* @param count - ссылка на счетчик рекурсий
+* @param depth - счетчик глубины рекурсии
+* @param maxDepth - максимальная глубина рекурсии
+* @param mem - ссылка на переменную для подсчёта памяти
+*/
+void mergeSort(std::vector<double>& arr, int l, int r, double& count, double depth, double& maxDepth, double& mem) {
+    count++;
+    if (l >= r) {
+        return;
+    }
+
+    int m = l + (r - l) / 2;
+    depth++;
+
+    mergeSort(arr, l, m, count, depth, maxDepth, mem);
+    mergeSort(arr, m + 1, r, count, depth, maxDepth, mem);
+    merge(arr, l, m, r, count, mem);
+
+    depth--;
+    maxDepth = std::max(maxDepth, depth);
+}
+
+/*
+* Функция заполнения вектора
+* @param v - ссылка на заполняемый вектор
+*/
+void vectorGenerate(std::vector<double>& v)
+{
+    std::mt19937 engine(time(0));
+    std::uniform_real_distribution<double> gen(-1.0, 1.0);
+    for (auto& el : v)
+        el = gen(engine);
+}
+
+/*
+* Поиск среднего
+* @param v - ссылка на вектор
+* @return - среднее значение вектора
+*/
+double getAverage(std::vector<double> const& v) {
+    if (v.empty()) {
+        return 0;
+    }
+
+    return std::reduce(v.begin(), v.end(), 0.0) / v.size();
+}
+
+int main() {
+    std::ofstream fout("result.txt");
+
+    std::vector<int> N = { 1000, 2000, 4000, 8000, 16000, 32000, 64000, 128000 };
+
+    std::vector<double> min_time;
+    std::vector<double> max_time;
+    std::vector<double> avg_time;
+
+    std::vector<double> min_depth;
+    std::vector<double> max_depth;
+    std::vector<double> avg_depth;
+
+    std::vector<double> min_count;
+    std::vector<double> max_count;
+    std::vector<double> avg_count;
+
+    std::vector<double> time;
+
+
+    for (auto n : N)
+    {
+        std::vector<double> timing;
+        std::vector<double> depth;
+        std::vector<double> countvec;
+
+        for (int i = 0; i < 20; i++)
+        {
+            double count = 0;
+            double MaxDepth = 0;
+            double depthloc = 0;
+            double mem = 0;
+            std::vector<double> v(n);
+            vectorGenerate(v);
+            std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+            mergeSort(v, 0, n - 1, count, depthloc, MaxDepth, mem);
+            std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> sec_diff = end - start;
+            time.push_back(sec_diff.count());
+            timing.push_back(sec_diff.count());
+            depth.push_back(MaxDepth);
+            countvec.push_back(count);
+            std::cout << "Length: " << n << "  Time: " << sec_diff.count() << " sec." << " Recursion count: " << count << " Max depth: " << MaxDepth << " Memory: " << mem << std::endl;
+            fout << "Length: " << n << "  Time: " << sec_diff.count() << " sec." << " Recursion count: " << count << " Max depth: " << MaxDepth << " Memory: " << mem << std::endl;
+        }
+
+        auto it = std::minmax_element(timing.begin(), timing.end());
+        double min_timing = *it.first;
+        double max_timing = *it.second;
+        min_time.push_back(min_timing);
+        max_time.push_back(max_timing);
+        avg_time.push_back(getAverage(timing));
+
+        auto it1 = std::minmax_element(depth.begin(), depth.end());
+        double min_depthloc = *it.first;
+        double max_depthloc = *it.second;
+        min_depth.push_back(min_depthloc);
+        max_depth.push_back(max_depthloc);
+        avg_depth.push_back(getAverage(depth));
+
+        auto it2 = std::minmax_element(countvec.begin(), countvec.end());
+        double min_countloc = *it.first;
+        double max_countloc = *it.second;
+        min_count.push_back(min_countloc);
+        max_count.push_back(max_countloc);
+        avg_count.push_back(getAverage(countvec));
+    }
+
+
+    fout << "min time : ";
+    std::cout << "min time : ";
+    for (auto it : min_time)
+    {
+        fout << it << " ";
+        std::cout << it << " ";
+    }
+
+    fout << "max time : ";
+    std::cout << "max time : ";
+    for (auto it : max_time)
+    {
+        fout << it << " ";
+        std::cout << it << " ";
+    }
+
+    fout << "avg time : ";
+    std::cout << "avg time : ";
+    for (auto it : avg_time)
+    {
+        fout << it << " ";
+        std::cout << it << " ";
+    }
+
+    //кол-во рекурсий
+    fout << "min count : ";
+    std::cout << "min count : ";
+    for (auto it : min_count)
+    {
+        fout << it << " ";
+        std::cout << it << " ";
+    }
+
+    fout << "max count : ";
+    std::cout << "max count : ";
+    for (auto it : max_count)
+    {
+        fout << it << " ";
+        std::cout << it << " ";
+    }
+
+    fout << "avg count : ";
+    std::cout << "avg count : ";
+    for (auto it : avg_count)
+    {
+        fout << it << " ";
+        std::cout << it << " ";
+    }
+
+
+    //глубина стека
+    fout << "min depth : ";
+    std::cout << "min depth : ";
+    for (auto it : min_depth)
+    {
+        fout << it << " ";
+        std::cout << it << " ";
+    }
+
+    fout << "max depth : ";
+    std::cout << "max depth : ";
+    for (auto it : max_depth)
+    {
+        fout << it << " ";
+        std::cout << it << " ";
+    }
+
+    fout << "avg depth : ";
+    std::cout << "avg depth : ";
+    for (auto it : avg_depth)
+    {
+        fout << it << " ";
+        std::cout << it << " ";
+    }
+
+
+
+
+    fout.close();
+
+}
