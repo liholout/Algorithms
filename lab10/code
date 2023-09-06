@@ -1,0 +1,61 @@
+import math
+import random
+import time
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Определяем функцию, которую нужно минимизировать
+def F(x):
+    return x**2 + 10 - 10*math.cos(2*math.pi*x)
+
+# Реализуем алгоритм отжига
+def annealing(T0, Tmin, kmax):
+    """Функция, реализующая алгоритм отжига
+    @param T0: Начальная температура
+    @param Tmin: Конечная температура 
+    @param kmax: Максимальное количество итераций
+    @return: Возвращает значение x, значение функции F(x), и списки значений времени работы алгоритма и температуры
+    """
+    x = random.uniform(-5.0, 5.0) # Начальное значение x
+    t = time.time() # Засекаем время
+    t_vals = [] # Список для хранения значений времени
+    T_vals = [] # Список для хранения значений температуры
+    x_vals = [] # Список для хранения значений x
+    k = 0 # Номер итерации
+    T = T0 # Начальная температура
+    while T > Tmin:   
+        k += 1            
+        x_new = x + T * np.random.standard_cauchy() # Генерируем новую точку
+        dF = F(x_new) - F(x) # Вычисляем разницу значений функции
+        if dF < 0 or random.random() < math.exp(-dF/T):
+            x = x_new # Принимаем новую точку
+        T = T0 / k # из задания
+        # Сохраняем текущие значения x, t, T
+        x_vals.append(x)
+        T_vals.append(T)
+        t_vals.append(time.time() - t)
+        if k == kmax:
+            break
+    return x, F(x), t_vals, T_vals
+
+# Задаем параметры алгоритма
+T0 = 100 # Начальная температура
+Tmin = 0.001 # Минимальная температура
+kmax = 10000 # Максимальное число итераций
+
+# Запускаем алгоритм отжига
+x_opt, F_opt, t_vals, T_vals = annealing(T0, Tmin, kmax)
+
+# Выводим результаты
+print("X:", x_opt)
+print("Значение функции:", F_opt)
+print("Время: t_val", t_vals)
+
+# Строим график зависимости времени от значения температуры
+T_vals_inv = [1/T for T in T_vals] # Инвертируем значения температуры для оси x
+plt.plot(T_vals_inv, t_vals)
+plt.xlabel("Инвертированная температура")
+plt.ylabel("Время (сек)")
+plt.title("График зависимости времени от значения температуры")
+plt.show()
+  
