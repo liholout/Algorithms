@@ -1,0 +1,17 @@
+import matplotlib.pyplot as plt
+
+x = [1000, 2000, 4000, 8000, 16000, 32000, 64000, 128000]
+min_time = [0.0153646, 0.0645129, 0.224572, 0.605739, 2.49773, 10.1627, 41.2322, 163.104]
+max_time = [0.0330504, 0.34036, 0.327446, 0.737365, 2.77065, 11.055, 44.9049, 174.81]
+avg_time = [0.0174678, 0.101816, 0.259165, 0.630688, 2.59273, 10.5708, 42.21, 165.707]
+
+plt.plot(x, min_time, label='Minimum')
+plt.plot(x, max_time, label='Maximum')
+plt.plot(x, avg_time, label='Average')
+
+plt.xscale('log', base=2)
+plt.xlabel('Data Size')
+plt.ylabel('Time (s)')
+plt.title('Time Metrics')
+plt.legend()
+plt.show()

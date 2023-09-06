@@ -1,0 +1,9 @@
+import numpy as np
+from scipy.optimize import curve_fit
+lengths = np.array([1000, 2000, 4000, 8000, 16000, 32000, 64000, 128000])
+max_time = [0.0330504, 0.34036, 0.327446, 0.737365, 2.77065, 11.055, 44.9049, 174.81]
+def func(N, C):
+ return C * N**2
+params, params_covariance = curve_fit(func, lengths, max_time)
+C = params[0]
+print("Minimum C:", C)

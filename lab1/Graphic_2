@@ -1,0 +1,16 @@
+import matplotlib.pyplot as plt
+import numpy as np
+
+x = [1000, 2000, 4000, 8000, 16000, 32000, 64000, 128000]
+max_time = [0.0330504, 0.34036, 0.327446, 0.737365, 2.77065, 11.055, 44.9049, 174.81]
+
+C = 1.068727908132172e-08
+
+plt.plot(x, max_time, label='Maximum')
+plt.plot(x, C * np.array(x)* np.array(x), label='O(C * N^2)')
+
+plt.xlabel('Data Size')
+plt.ylabel('Time (s)')
+plt.title('Time Metrics')
+plt.legend()
+plt.show()
