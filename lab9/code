@@ -1,0 +1,201 @@
+import random
+import json
+import struct
+
+def left_rotate(n, b):
+    return ((n << b) | (n >> (32 - b))) & 0xffffffff
+
+def sha1_hash(message):
+    # Initialize variables
+    h0 = 0x67452301
+    h1 = 0xEFCDAB89
+    h2 = 0x98BADCFE
+    h3 = 0x10325476
+    h4 = 0xC3D2E1F0
+    
+    # Append padding bits and length
+    ml = len(message) * 8
+    message += b'\x80'
+    while len(message) % 64 != 56:
+        message += b'\x00'
+    message += struct.pack('>Q', ml)
+    
+    # Process message in 512-bit blocks
+    for i in range(0, len(message), 64):
+        block = message[i:i+64]
+        w = list(struct.unpack('>16L', block))
+        for j in range(16, 80):
+            w.append(left_rotate(w[j-3] ^ w[j-8] ^ w[j-14] ^ w[j-16], 1))
+        
+        # Initialize hash value for this block
+        a = h0
+        b = h1
+        c = h2
+        d = h3
+        e = h4
+        
+        # Main loop
+        for j in range(80):
+            if j < 20:
+                f = (b & c) | ((~b) & d)
+                k = 0x5A827999
+            elif j < 40:
+                f = b ^ c ^ d
+                k = 0x6ED9EBA1
+            elif j < 60:
+                f = (b & c) | (b & d) | (c & d)
+                k = 0x8F1BBCDC
+            else:
+                f = b ^ c ^ d
+                k = 0xCA62C1D6
+            
+            temp = left_rotate(a, 5) + f + e + k + w[j] & 0xffffffff
+            e = d
+            d = c
+            c = left_rotate(b, 30)
+            b = a
+            a = temp
+            
+        # Add this block's hash to result so far
+        h0 = h0 + a & 0xffffffff
+        h1 = h1 + b & 0xffffffff
+        h2 = h2 + c & 0xffffffff
+        h3 = h3 + d & 0xffffffff
+        h4 = h4 + e & 0xffffffff
+    
+    # Produce the final hash value
+    return '%08x%08x%08x%08x%08x' % (h0, h1, h2, h3, h4)
+
+
+# test for finding longest common substring in hash values
+def test_common_substring():
+    # generate 1000 pairs of strings with different number of differences
+    diffs = [1, 2, 4, 8, 16]
+    results = []
+    for diff in diffs:
+        max_len = 0
+        for i in range(1000):
+            # generate two strings with 'diff' differences
+            str1 = ''.join([random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(128)])
+            str2 = list(str1)
+            for j in range(diff):
+                idx = random.randint(0, len(str2) - 1)
+                str2[idx] = random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+            str2 = ''.join(str2)
+            # calculate hash values
+            hash1 = sha1_hash(str1.encode('utf-8'))
+            hash2 = sha1_hash(str2.encode('utf-8'))
+            # find longest common substring in hash values
+            common_substring = ''
+            for k in range(len(hash1)):
+                for l in range(k, len(hash1)):
+                    if hash1[k:l+1] in hash2:
+                        if len(hash1[k:l+1]) > len(common_substring):
+                            common_substring = hash1[k:l+1]
+            results.append((diff, len(common_substring)))
+        # plot the results
+        x = [r[0] for r in results if r[0] == diff]
+        y = [r[1] for r in results if r[0] == diff]
+        plt.plot(x, y, label=f"{diff} differences")
+    plt.xlabel('Number of differences')
+    plt.ylabel('Length of longest common substring')
+    plt.legend()
+    plt.show()
+
+
+# test for finding duplicate hashes in generated set
+def test_duplicate_hashes():
+    # test for n = 10^2, 10^3, 10^4, 10^5, 10^6
+    n_values = [10**i for i in range(2, 4)]
+    for n in n_values:
+        # generate n random strings and calculate their hashes
+        strings = [ ''.join([random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(256)]) for _ in range(n)]
+        hashes = [ sha1_hash(s.encode('utf-8')) for s in strings]
+        # find duplicate hashes and count their occurrences
+        duplicate_hashes = set([h for h in hashes if hashes.count(h) > 1])
+        result = (len(duplicate_hashes) > 0, len(duplicate_hashes))
+        # print the results
+        print(f"N = {n} | Duplicate hashes: {result[0]}, Count: {result[1]}")
+
+# test for measuring hash calculation speed for different input sizes
+def test_hash_speed():
+    # test for different input sizes
+    input_sizes = [64, 128, 256, 512, 1024, 2048, 4096, 8192]
+    for size in input_sizes:
+        # generate 1000 random strings and calculate their hash values
+        strings = [ ''.join([random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(size)]) for _ in range(1000)]
+        start_time = time.time()
+        for s in strings:
+            sha1_hash(s.encode('utf-8'))
+        end_time = time.time()
+        # check avg time
+        avg_time = (end_time - start_time) / 1000
+        print(f"Input Size: {size}, Average Time Taken: {avg_time}")    
+test_common_substring()
+test_duplicate_hashes()
+test_hash_speed()
+def test_hash_pairs():
+    results = {}
+    pairs = [(128, diff) for diff in [1, 2, 4, 8, 16]]
+    for size, diff in pairs:
+        strings = [ ''.join([random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(size)]) for _ in range(1000)]
+        hash_list = [sha1_hash(s.encode('utf-8')) for s in strings]
+        max_common_subseq_len = []
+        for i in range(len(strings)):
+            for j in range(i+1, len(strings)):
+                # find common substring in the hash values
+                common_subseq = ""
+                for k in range(len(hash_list[i])):
+                    if hash_list[i][k] == hash_list[j][k]:
+                        common_subseq += hash_list[i][k]
+                    else:
+                        break
+                # get the length of the common substring and append to the list
+                max_common_subseq_len.append(len(common_subseq))
+        results[str(diff)] = max(max_common_subseq_len)
+    # plot the results
+    plt.plot(results.keys(), results.values())
+    plt.xlabel('Number of character differences')
+    plt.ylabel('Max common substring length')
+    plt.title('Hash pairs test')
+    plt.savefig('hash_pairs.png')
+    # save the results to a JSON file
+    with open('hash_pairs_results.json', 'w') as f:
+        json.dump(results, f)
+
+
+def test_hash_duplicates():
+    results = {}
+    for i in range(2, 7):
+        n = 10 ** i
+        strings = [ ''.join([random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(256)]) for _ in range(n)]
+        hash_list = [sha1_hash(s.encode('utf-8')) for s in strings]
+        num_duplicates = hash_list.count(hash_list[0])
+        results[str(n)] = {'has_duplicates': num_duplicates > 1, 'num_duplicates': num_duplicates}
+    # save the results to a JSON file
+    with open('hash_duplicates_results.json', 'w') as f:
+        json.dump(results, f)
+
+
+def test_hash_speed():
+    results = {}
+    input_sizes = [64, 128, 256, 512, 1024, 2048, 4096, 8192]
+    for size in input_sizes:
+        strings = [ ''.join([random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(size)]) for _ in range(1000)]
+        start_time = time.time()
+        for s in strings:
+            sha1_hash(s.encode('utf-8'))
+        end_time = time.time()
+        results[str(size)] = end_time - start_time
+    # plot the results
+    plt.plot(results.keys(), results.values())
+    plt.xlabel('Input size')
+    plt.ylabel('Time (seconds)')
+    plt.title('Hash speed test')
+    plt.savefig('hash_speed.png')
+    # save the results to a JSON file
+    with open('hash_speed_results.json', 'w') as f:
+        json.dump(results, f)
+test_hash_pairs()
+test_hash_duplicates()
+test_hash_speed()
