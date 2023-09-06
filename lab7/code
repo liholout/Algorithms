@@ -1,0 +1,421 @@
+#include <iostream>
+#include <vector>
+#include <numeric>
+
+
+enum Color { RED, BLACK };
+
+/**
+ * Represents a node in the red-black tree.
+ */
+struct Node {
+    int key;
+    Color color;
+    Node* left;
+    Node* right;
+    Node* parent;
+    
+    /**
+     * Constructor to create a new node with the given key.
+     */
+    Node(int key) {
+        this->key = key;
+        color = RED;
+        left = right = parent = nullptr;
+    }
+};
+
+
+/**
+ * Represents a red-black tree.
+ */
+class RedBlackTree {
+private:
+    Node* root;
+
+    /**
+     * Performs a left rotation around the given node.
+     * 
+     * @param x The node to rotate around.
+     */
+    void leftRotate(Node* x) {
+        Node* y = x->right;
+        x->right = y->left;
+        if (y->left != nullptr)
+            y->left->parent = x;
+        y->parent = x->parent;
+        if (x->parent == nullptr)
+            root = y;
+        else if (x == x->parent->left)
+            x->parent->left = y;
+        else
+            x->parent->right = y;
+        y->left = x;
+        x->parent = y;
+    }
+
+    /**
+     * Performs a right rotation around the given node.
+     * 
+     * @param x The node to rotate around.
+     */
+    void rightRotate(Node* x) {
+        Node* y = x->left;
+        x->left = y->right;
+        if (y->right != nullptr)
+            y->right->parent = x;
+        y->parent = x->parent;
+        if (x->parent == nullptr)
+            root = y;
+        else if (x == x->parent->right)
+            x->parent->right = y;
+        else
+            x->parent->left = y;
+        y->right = x;
+        x->parent = y;
+    }
+
+    /**
+    * Fixes the Red-Black Tree property violations that may occur after inserting a node.
+    *
+    * @param z The node that was just inserted and may cause Red-Black Tree property violations.
+    */
+    void fixInsert(Node* z) {
+        // While z's parent is red (a violation of the Red-Black Tree property)
+        while (z->parent != nullptr && z->parent->color == RED) {
+            // If z's parent is the left child of its grandparent
+            if (z->parent == z->parent->parent->left) {
+                Node* y = z->parent->parent->right;
+                // If y is red, recolor z's parent, uncle, and grandparent, and move z up to the grandparent
+                if (y != nullptr && y->color == RED) {
+                    z->parent->color = BLACK;
+                    y->color = BLACK;
+                    z->parent->parent->color = RED;
+                    z = z->parent->parent;
+                }
+                // If y is black or a nullptr and z is a right child, rotate left about z's parent, recolor some nodes, and move z up to the grandparent
+                else {
+                    if (z == z->parent->right) {
+                        z = z->parent;
+                        leftRotate(z);
+                    }
+                    z->parent->color = BLACK;
+                    z->parent->parent->color = RED;
+                    rightRotate(z->parent->parent);
+                }
+            }
+            // If z's parent is the right child of its grandparent
+            else {
+                Node* y = z->parent->parent->left;
+                // If y is red, recolor z's parent, uncle, and grandparent, and move z up to the grandparent
+                if (y != nullptr && y->color == RED) {
+                    z->parent->color = BLACK;
+                    y->color = BLACK;
+                    z->parent->parent->color = RED;
+                    z = z->parent->parent;
+                }
+                // If y is black or a nullptr and z is a left child, rotate right about z's parent, recolor some nodes, and move z up to the grandparent
+                else {
+                    if (z == z->parent->left) {
+                        z = z->parent;
+                        rightRotate(z);
+                    }
+                    z->parent->color = BLACK;
+                    z->parent->parent->color = RED;
+                    leftRotate(z->parent->parent);
+                }
+            }
+        }
+        root->color = BLACK; // Ensure the root of the Red-Black Tree is black
+    }
+
+    /**
+    * Replaces the subtree rooted at node u with the subtree rooted at node v.
+    * If u is the root of the tree, updates the root to be v.
+    * @param u: the node to be replaced
+    * @param v: the node to replace u
+    */
+    void transplant(Node* u, Node* v) {
+        if (u->parent == nullptr)
+            root = v;
+        else if (u == u->parent->left)
+            u->parent->left = v;
+        else
+            u->parent->right = v;
+        v->parent = u->parent;
+    }
+
+    /**
+    * Returns the node with the minimum key value in the subtree rooted at x.
+    * @param x: the root of the subtree
+    * @return: the node with the minimum key value
+    */
+    Node* minimum(Node* x) {
+        while (x->left != nullptr)
+            x = x->left;
+        return x;
+    }
+
+    /**
+    * fixDelete function fixes the violation of the red-black tree properties caused by deleting a node from the tree
+    *
+    * @param x - the node where the fix starts
+    */
+    void fixDelete(Node* x) {
+        while (x != root && x->color == BLACK) {
+            if (x == x->parent->left) {
+            // x is a left child
+                Node* w = x->parent->right;
+                // case 1: x's sibling w is red
+                if (w->color == RED) {
+                // case 1: x's sibling w is red
+                    w->color = BLACK;
+                    x->parent->color = RED;
+                    leftRotate(x->parent);
+                    w = x->parent->right;
+                }
+                if (w->left->color == BLACK && w->right->color == BLACK) {
+                // case 2: x's sibling w is black, and both of w's children are black
+                    w->color = RED;
+                    x = x->parent;
+                }
+                else {
+                    if (w->right->color == BLACK) {
+                    // case 3: x's sibling w is black, w's left child is red, and w's right child is black
+                        w->left->color = BLACK;
+                        w->color = RED;
+                        rightRotate(w);
+                        w = x->parent->right;
+                    }
+                    // case 4: x's sibling w is black, and w's right child is red
+                    w->color = x->parent->color;
+                    x->parent->color = BLACK;
+                    w->right->color = BLACK;
+                    leftRotate(x->parent);
+                    x = root;
+                }
+            }
+            else {
+                // x is a right child
+                Node* w = x->parent->left;
+                if (w->color == RED) {
+                // case 1: x's sibling w is red
+                    w->color = BLACK;
+                    x->parent->color = RED;
+                    rightRotate(x->parent);
+                    w = x->parent->left;
+                }
+                if (w->right->color == BLACK && w->left->color == BLACK) {
+                // case 2: x's sibling w is black, and both of w's children are black
+                    w->color = RED;
+                    x = x->parent;
+                }
+                else {
+                    if (w->left->color == BLACK) {
+                    // case 3: x's sibling w is black, w's right child is red, and w's left child is black
+                        w->right->color = BLACK;
+                        w->color = RED;
+                        leftRotate(w);
+                        w = x->parent->left;
+                    }
+                    // case 4: x's sibling w is black, and w's left child is red
+                    w->color = x->parent->color;
+                    x->parent->color = BLACK;
+                    w->left->color = BLACK;
+                    rightRotate(x->parent);
+                    x = root;
+                }
+            }
+        }
+        x->color = BLACK;
+    }
+public:
+
+    /**
+    * Constructor for the Red-Black Tree.
+    */
+    RedBlackTree() {
+        root = nullptr;
+    }
+    
+    /**
+    * Inserts a new node with the given key into the Red-Black Tree.
+    * @param key The key to be inserted.
+    */
+    void insert(int key) {
+        Node* z = new Node(key);
+        Node* y = nullptr;
+        Node* x = root;
+        while (x != nullptr) {
+            y = x;
+            if (z->key < x->key)
+                x = x->left;
+            else
+                x = x->right;
+        }
+        z->parent = y;
+        if (y == nullptr)
+            root = z;
+        else if (z->key < y->key)
+            y->left = z;
+        else
+            y->right = z;
+        fixInsert(z);
+    }
+
+    /**
+    * Finds the node with the given key in the Red-Black Tree.
+    * @param key The key to search for.
+    * @return The node with the given key, or nullptr if not found.
+    */
+    Node* find(int key) {
+        Node* x = root;
+        while (x != nullptr) {
+            if (key < x->key)
+                x = x->left;
+            else if (key > x->key)
+                x = x->right;
+            else
+                return x;
+        }
+        return nullptr;
+    }
+
+    /**
+    *Removes a node with the given key from the Red-Black tree.
+    *
+    *@param key The key of the node to be removed.
+    */
+    void remove(int key) {
+        Node* z = find(key); // Find the node with the given key
+        if (z == nullptr)
+            return; // If the node does not exist, return
+        Node* x, * y;
+        if (z->left == nullptr || z->right == nullptr)
+            y = z; // If the node has no or only one child, set y to the node itself
+        else
+            y = minimum(z->right); // If the node has two children, set y to the minimum node in its right subtree
+        if (y->left != nullptr)
+            x = y->left;
+        else
+            x = y->right;
+        if (x == nullptr) // If x is null, return
+            return;
+        x->parent = y->parent;
+
+        if (y->parent == nullptr)
+            root = x;
+        else if (y == y->parent->left)
+            y->parent->left = x;
+        else
+            y->parent->right = x;
+        if (y != z)
+            z->key = y->key; // Copy y's key to z, if necessary
+        if (y->color == BLACK)
+            fixDelete(x); // Fix the Red-Black tree properties, if necessary
+        delete y; // Delete y
+    }
+    
+    /**
+    *Returns the maximum depth of the given node in the Red-Black tree.
+    *
+    *@param node The node to compute the maximum depth for.
+    *@return The maximum depth of the given node.
+    */
+    int maxDepth(Node* node) {
+        if (node == nullptr)
+            return 0;
+        else {
+            int leftDepth = maxDepth(node->left);
+            int rightDepth = maxDepth(node->right); // Recursively compute the maximum depth of the node's left and right subtrees
+            if (leftDepth > rightDepth)
+                return (leftDepth + 1); // Return the maximum depth of the node's left subtree
+            else
+                return (rightDepth + 1); // Return the maximum depth of the node's right subtree
+        }
+    }
+
+    /**
+    *
+    * Recursively computes the depth of all branches of a Red-Black Tree starting at a given node
+    * @param node the node to start from
+    * @param depth the depth of the current node in the tree
+    * @param result a vector to store the depth of all branches
+    */
+    void allBranchesDepth(Node* node, int depth, std::vector<int>& result) {
+        if (node == nullptr)
+            return;
+        if (node->left == nullptr && node->right == nullptr) {
+            result.push_back(depth);
+        }
+        else {
+            allBranchesDepth(node->left, depth + 1, result);
+            allBranchesDepth(node->right, depth + 1, result);
+        }
+    }
+
+    /**
+    *
+    * Computes the depth of all branches of a Red-Black Tree
+    * @return a vector containing the depth of all branches
+    */
+    std::vector<int> getAllBranchesDepth() {
+        std::vector<int> result;
+        allBranchesDepth(root, 0, result);
+        return result;
+    }
+
+    /**
+    *
+    * Calculates the black height of all branches in the red-black tree.
+    * @param node The current node in the recursive traversal.
+    * @param depth The current depth of the traversal.
+    * @param result A vector to store the black height of each leaf node in the tree.
+    * @param blackHeight The current black height of the traversal.
+    */
+    void allBranchesBlackHeigth(Node* node, int depth, std::vector<int>& result, int blackHeight) {
+        if (node == nullptr)
+            return;
+        if (node->color == BLACK) {
+            blackHeight++;
+        }
+        if (node->left == nullptr && node->right == nullptr) {
+            result.push_back(blackHeight);
+        }
+        else {
+            allBranchesBlackHeigth(node->left, depth + 1, result, blackHeight);
+            allBranchesBlackHeigth(node->right, depth + 1, result, blackHeight);
+        }
+    }
+
+    /**
+    *
+    * Returns a vector containing the black height of all branches in the red-black tree.
+    * @return A vector containing the black height of all branches in the red-black tree.
+    */
+    std::vector<int> getBlackHeigth() {
+        std::vector<int> result;
+        allBranchesBlackHeigth(root, 0, result, 0);
+        return result;
+    }
+};
+
+int main() {
+    
+    RedBlackTree rbt1;
+    std::vector<int> vector(1000);
+    std::iota(vector.begin(), vector.end(), 1);
+    for (auto& el : vector) 
+        rbt1.insert(el);
+
+    for (auto el : rbt1.getAllBranchesDepth())
+        std::cout << el << " ";
+
+    std::cout << "------------------------" << std::endl;
+
+    for (auto el : rbt1.getBlackHeigth())
+        std::cout << el << " ";
+    
+
+    return 0;
+}
