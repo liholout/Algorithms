@@ -1,0 +1,299 @@
+#include <iostream> // ввод-вывод
+#include <vector> // шаблон класса для контейнеров последовательностей
+#include <queue> // шаблон очереди
+#include <stack> // шаблон стека
+#include <fstream>
+#include <iomanip>
+#include <chrono>
+
+using namespace std;
+
+/**
+* A class representing a graph.
+*/
+class Graph {
+public:
+	/**
+	* Constructor for the Graph class.
+	*
+	* @param vertices The number of vertices in the graph.
+	* @param directed Whether the graph is directed (true) or undirected (false). Default
+   is false.
+	*/
+	Graph(int vertices, bool directed = false);
+
+	/**
+	* Adds an edge to the graph.
+	*
+	* @param u The starting vertex of the edge.
+	* @param v The ending vertex of the edge.
+	* @param weight The weight of the edge. Default is 1.
+	*/
+
+	void add_edge(int u, int v, int weight = 1);
+	/**
+	* Returns the adjacency matrix of the graph.
+	*
+	* @return The adjacency matrix of the graph.
+	*/
+	vector<vector<int>> get_adj_matrix();
+
+	/**
+	* Returns the edges of the graph.
+	*
+	* @return The edges of the graph.
+	*/
+	vector<pair<int, int>> get_edges();
+
+	/**
+	* Prints the adjacency matrix of the graph.
+	*/
+	void print_adj_matrix() const;
+
+	/**
+	 * Returns the degree of a given vertex.
+	 * The degree of a vertex is the number of edges that are incident to it.
+	 *
+	 * @param u The vertex for which to find the degree.
+	 * @return The degree of vertex u.
+	 */
+	int get_degree(int u) const;
+
+	/*
+	Finds the shortest paths between all pairs of vertices in the graph using the Floyd-Warshall algorithm.
+	*/
+	vector<vector<int>> floyd_warshall();
+private:
+	int vertices_; // The number of vertices in the graph.
+	bool directed_; // Whether the graph is directed or undirected.
+	vector<vector<int>> adj_matrix_; // The adjacency matrix of the graph.
+	vector<vector<pair<int, int>>> adj_list_; // The adjacency list of the graph.
+	vector<pair<int, int>> edges_; // The edges of the graph.
+	vector<vector<int>> inc_matrix_; // The incidence matrix of the graph.
+};
+
+/**
+* Constructor for the Graph class.
+* @param vertices The number of vertices in the graph.
+* @param directed A boolean indicating whether the graph is directed or undirected.
+*/
+Graph::Graph(int vertices, bool directed) {
+	vertices_ = vertices;
+	directed_ = directed;
+	adj_matrix_ = vector<vector<int>>(vertices, vector<int>(vertices, 0));
+	adj_list_ = vector<vector<pair<int, int>>>(vertices);
+}
+/**
+* Adds an edge between two vertices in the graph.
+* @param u The index of the first vertex.
+* @param v The index of the second vertex.
+* @param weight The weight of the edge.
+*/
+void Graph::add_edge(int u, int v, int weight) {
+	adj_matrix_[u][v] = weight;
+	adj_list_[u].push_back(make_pair(v, weight));
+	edges_.push_back(make_pair(u, v));
+	if (directed_) {
+		adj_matrix_[u][v] = weight;
+	}
+	else {
+		adj_matrix_[u][v] = adj_matrix_[v][u] = weight;
+	}
+}
+/**
+* Returns the adjacency matrix of the graph.
+* @return A 2D vector representing the adjacency matrix.
+*/
+vector<vector<int>> Graph::get_adj_matrix() {
+	return adj_matrix_;
+}
+
+/**
+* Returns the edges of the graph.
+* @return A vector of pairs representing the edges.
+*/
+vector<pair<int, int>> Graph::get_edges() {
+	return edges_;
+}
+
+/**
+* Prints the adjacency matrix of the graph.
+*/
+void Graph::print_adj_matrix() const {
+	int width = 3; // Set the width of each column to 3 characters
+	cout << setw(width) << ""; // Empty top-left corner
+	for (int i = 0; i < vertices_; i++) { cout << setw(width) << i; }
+	cout << endl;
+	for (int i = 0; i < vertices_; i++) {
+		cout << setw(width) << i;
+		for (int j = 0; j < vertices_; j++) {
+			/*cout << adj_matrix_[i][j] << " ";*/
+			if (adj_matrix_[i][j] > 0) cout << setw(width) << adj_matrix_[i][j];
+			else cout << setw(width) << 0;
+		}
+		cout << endl;
+	}
+	cout << endl;
+}
+
+/**
+ * Computes the shortest path between every pair of vertices in the graph using the Floyd-Warshall algorithm.
+ *
+ * @return a vector of vectors representing the shortest distances between all pairs of vertices.
+ */
+vector<vector<int>> Graph::floyd_warshall() {
+	// Copy the adjacency matrix.
+	vector<vector<int>> d = get_adj_matrix();
+
+	// Apply the Floyd-Warshall algorithm.
+	for (int k = 0; k < vertices_; k++) {
+		for (int i = 0; i < vertices_; i++) {
+			for (int j = 0; j < vertices_; j++) {
+				if (d[i][k] != 0 && d[k][j] != 0) {
+					if (d[i][j] > d[i][k] + d[k][j]) {
+						d[i][j] = d[i][k] + d[k][j];
+					}
+				}
+			}
+		}
+	}
+
+	return d;
+}
+
+/**
+
+Prints a matrix to the console.
+@param m The matrix to print.
+*/
+void print_matrix(const vector<vector<int>>& matrix) {
+	int rows = matrix.size();
+	int cols = matrix[0].size();
+
+	// Print column labels
+	cout << "   ";
+	for (int j = 0; j < cols; j++) {
+		cout << setw(3) << j;
+	}
+	cout << endl;
+
+	// Print row labels and data
+	for (int i = 0; i < rows; i++) {
+		cout << setw(3) << i;
+		for (int j = 0; j < cols; j++) {
+			cout << setw(3) << matrix[i][j];
+		}
+		cout << endl;
+	}
+}
+
+/**
+ * Returns the degree of a given vertex.
+ * The degree of a vertex is the number of edges that are incident to it.
+ *
+ * @param u The vertex for which to find the degree.
+ * @return The degree of vertex u.
+ */
+int Graph::get_degree(int u) const {
+	int degree = 0;
+	for (int v = 0; v < adj_matrix_.size(); v++) {
+		if (adj_matrix_[u][v] != 0) {
+			degree++;
+		}
+	}
+	return degree;
+}
+
+
+/**
+ * Generate a random graph with the given number of vertices and minimum edges per vertex.
+ *
+ * @param num_vertices: The number of vertices in the graph.
+ * @param min_edges_per_vertex: The minimum number of edges each vertex should have.
+ * @return A Graph object representing the generated graph.
+ */
+Graph generate_graph(int num_vertices, int min_edges_per_vertex) {
+	Graph g(num_vertices);	// Create a connected graph with num_vertices-1 edges 
+
+	// Создание связного графа с num_vertices-1 ребрами с помощью BFS
+	queue<int> q;
+	vector<bool> visited(num_vertices, false);
+	visited[0] = true;
+	q.push(0);
+	while (!q.empty()) {
+		int u = q.front(); q.pop();
+		int num_edges_added = 0;
+		for (int v = 0; v < num_vertices; v++) {
+			// Если рассматривается одна и та жевершина или ребро уже добавлено, пропускаем ее
+			if (u == v || g.get_adj_matrix()[u][v] != 0) {
+				continue;
+			}
+			int weight = rand() % 20 + 1; // Добавление нового ребра между вершинами u и v с весом weight
+			g.add_edge(u, v, weight);
+			num_edges_added++;
+
+			// Если добавили все необходимые ребра, выходим из цикла
+			if (num_edges_added == num_vertices - 1) {
+				break;
+			}
+		}
+		for (int v = 0; v < num_vertices; v++) {
+			// Если между вершинами u и v есть ребро и вершина v еще не была посещена, добавляем ее в очередь
+			if (g.get_adj_matrix()[u][v] != 0 && !visited[v]) {
+				visited[v] = true;
+				q.push(v);
+			}
+		}
+	}    
+	// Add additional edges until each vertex has at least min_edges_per_vertex
+	for (int u = 0; u < num_vertices; u++) {
+		while (g.get_degree(u) < min_edges_per_vertex + 1) {
+			int v = rand() % num_vertices;
+			if (u == v || g.get_adj_matrix()[u][v] != 0) {
+				continue;
+			}
+			int weight = rand() % 20 + 1;
+			g.add_edge(u, v, weight);
+		}
+	}
+
+	return g;
+}
+
+
+int main() {
+	srand(time(0));
+	int num_vertices[] = { 10, 20, 50, 100 };
+	int min_edges_per_vertex[] = { 3, 4, 10, 20 };
+	int num_graphs = 5;
+	int j = 0;
+	ofstream fout("times.txt");
+	for (j; j < 4; j++) {
+		for (int i = 0; i < num_graphs; i++) {
+
+			//int num_edges = min_edges + i * 2;
+			Graph g = generate_graph(num_vertices[j], min_edges_per_vertex[j]);
+
+
+			cout << "Adjacency matrix: " << endl;
+			g.print_adj_matrix();
+
+			cout << "Graph " << i + 1 << " with " << num_vertices[j] << " vertices" << endl;
+			fout << "Graph " << i + 1 << " with " << num_vertices[j] << " vertices" << endl;
+
+			chrono::high_resolution_clock::time_point start = chrono::high_resolution_clock::now();
+			vector<vector<int>> shortest_paths = g.floyd_warshall();
+			chrono::high_resolution_clock::time_point end = chrono::high_resolution_clock::now();
+			chrono::duration<double, milli> milli_diff = end - start;
+			// Print the shortest paths.
+			cout << "Shortest paths matrix: " << endl;
+			print_matrix(shortest_paths);
+
+			cout << "Time in millisec: " << milli_diff.count() << endl;
+			fout << "Time in millisec: " << milli_diff.count() << endl;
+		}
+	}
+
+	fout.close();
+	return EXIT_SUCCESS;
+}
